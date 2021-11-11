@@ -5,7 +5,9 @@ import plotly.express as px
 import os
 import re
 
-def find_proteoclass(df):dsa
+dbpath = os.path.join(os.path.abspath(os.path.dirname(__file__)),'itol_template')
+
+def find_proteoclass(df):
     phy_class = []
     for index, row in df.iterrows():
         phylum = row['phylum']
@@ -51,8 +53,8 @@ def to_color_strip(acc2info,info2color,dataset):
     dataset_label = dataset
 
     # 打开模板文件
-    os.chdir('/share/home-user/hyc/db/')
-    template_text = open('./itol_template/dataset_color_strip_template.txt').read()
+    
+    template_text = open(os.path.join(dbpath,'dataset_color_strip_template.txt')).read()
 
     # 输入到预先修改为format格式的文本文件
     template_text = template_text.format(legend_text=legend_text,
@@ -86,8 +88,8 @@ def to_color_style(acc2info,info2color,dataset,pos,bg=False):
     dataset_label = dataset
 
     # 打开模板文件
-    os.chdir('/share/home-user/hyc/db/')
-    template_text = open('./itol_template/dataset_styles_template.txt').read()
+    
+    template_text = open(os.path.join(dbpath,'dataset_styles_template.txt')).read()
 
     # 输入到预先修改为format格式的文本文件
     template_text = template_text.format(legend_text=legend_text,
@@ -110,8 +112,8 @@ def to_color_range(acc2info, info2color, pos='range'):
         anno_text = '\n'.join(['%s,%s,%s,normal,3' % (acc, pos, color)
                               for acc,color in acc2color.items()])
     
-    os.chdir('/share/home-user/hyc/db/')
-    template_text = open('./itol_template/colors_styles_template.txt').read()
+    
+    template_text = open(os.path.join(dbpath,'colors_styles_template.txt')).read()
 
     # 形成最后输出文件
     out_text = template_text + '\n' + anno_text
@@ -125,8 +127,8 @@ def highlight_outgroup(acc2type):
         if re.match(r'.*outgroup$', v):
             og_dict.update({k:v})
 
-    os.chdir('/share/home-user/hyc/db/')
-    template_text = open('./itol_template/colors_styles_template.txt').read()
+    
+    template_text = open(os.path.join(dbpath,'colors_styles_template.txt')).read()
 
     annote_text = '\n'.join(['%s label_background rgba(81,202,76,0.78)\n%s label rgba(0,0,0,1)' %(acc,acc)
                              for acc,outgroup in og_dict.items()])
@@ -135,9 +137,10 @@ def highlight_outgroup(acc2type):
 
     return out_text
 
+
 def simplebar(acc2len,name,color='#707FD1'):
-    os.chdir('/share/home-user/hyc/db/')
-    template_text = open('./itol_template/dataset_simplebar_template.txt').read()
+    
+    template_text = open(os.path.join(dbpath,'dataset_simplebar_template.txt')).read()
 
     bar_color = color
     dataset_label = name
@@ -156,13 +159,14 @@ def to_binary(acc2info, label='binary', sep=','):
     shape = sep.join(range(1,len(set(list(acc2info.values())))+1))
     field_labels = sep.join(list(acc2info.values()))
 
-    os.chdir('/share/home-user/hyc/db/')
-    template_text = open('./itol_template/dataset_binary_template.txt').read()
+    
+    template_text = open(os.path.join(dbpath,'dataset_binary_template.txt')).read()
 
     template_text = template_text.format(shape=shape,
                                          field_labels=field_labels,
                                          dataset_label=label)
 
+    df = pd.DataFrame(acc2info)
     annotate_text = '\n'.join([sep.join([str(_) for _ in list(row)[1:]])
                                for row in df.itertuples()])
 
@@ -171,51 +175,51 @@ def to_binary(acc2info, label='binary', sep=','):
     return out_text
 
 
-def to_binary_init():
-    os.chdir('/share/home-user/hyc')
+# def to_binary_init():
+#     os.chdir('/share/home-user/hyc')
 
-    genes = ['nirK', 'nirS', 'nosZ', 'norB']
+#     genes = ['nirK', 'nirS', 'nosZ', 'norB']
 
-    df_temp = pd.DataFrame()
-    df = pd.DataFrame()
+#     df_temp = pd.DataFrame()
+#     df = pd.DataFrame()
 
-    for gene in genes:
+#     for gene in genes:
 
-        filepath = './work/6_ancestral_reconstruction/1_leaf_state/genome_' + gene + 'criteria.tsv'
+#         filepath = './work/6_ancestral_reconstruction/1_leaf_state/genome_' + gene + 'criteria.tsv'
 
-        df_temp = pd.read_table(filepath,sep = '\t')
-        df_temp.loc[df_temp[gene] == gene, [gene]] = 1
-        df_temp.loc[df_temp[gene] == str('No_' + gene), [gene]] = -1
-        if not df.empty:
-            df = pd.merge(df, df_temp, left_on='Genome', right_on='Genome')
-        else:
-            df = df_temp
-            continue
+#         df_temp = pd.read_table(filepath,sep = '\t')
+#         df_temp.loc[df_temp[gene] == gene, [gene]] = 1
+#         df_temp.loc[df_temp[gene] == str('No_' + gene), [gene]] = -1
+#         if not df.empty:
+#             df = pd.merge(df, df_temp, left_on='Genome', right_on='Genome')
+#         else:
+#             df = df_temp
+#             continue
 
-    # for gene in genes:
-        # df.loc[df[gene] == 0, [gene]] = -1
+#     # for gene in genes:
+#         # df.loc[df[gene] == 0, [gene]] = -1
 
-    out_text = to_binary(df)
+#     out_text = to_binary(df)
 
-    with open('./work/tree/annotate/binary_annotate.txt', 'w') as f:
-        f.write(out_text)
+#     with open('./work/tree/annotate/binary_annotate.txt', 'w') as f:
+#         f.write(out_text)
 
-    # return df
+#     # return df
     
-def to_binary_ref(ref_ids,
-                  sep = ',',
-                  shape = '2',
-                  field_labels = 'ref',
-                  label = 'reference'):
-    os.chdir('/share/home-user/hyc/db/itol_template')
-    template_text = open('./dataset_binary_template.txt').read()
-    template_text = template_text.format(shape=shape,
-                                         field_labels=field_labels,
-                                         dataset_label=label)
-    annotate_text = '\n'.join(['%s%s1'%(_,sep) for _ in ref_ids])
+# def to_binary_ref(ref_ids,
+#                   sep = ',',
+#                   shape = '2',
+#                   field_labels = 'ref',
+#                   label = 'reference'):
+#     os.chdir('/share/home-user/hyc/db/itol_template')
+#     template_text = open('./dataset_binary_template.txt').read()
+#     template_text = template_text.format(shape=shape,
+#                                          field_labels=field_labels,
+#                                          dataset_label=label)
+#     annotate_text = '\n'.join(['%s%s1'%(_,sep) for _ in ref_ids])
     
-    out_text = template_text + '\n' + annotate_text
-    return out_text
+#     out_text = template_text + '\n' + annotate_text
+#     return out_text
 
 
 def get_color(acc2info):
@@ -248,8 +252,8 @@ def get_color(acc2info):
 
 
 def to_external_label(acc2info,dataset='label info'):
-    os.chdir('/share/home-user/hyc/db/')
-    template_text = open('./itol_template/dataset_text_template.txt').read()
+    
+    template_text = open(os.path.join(dbpath,'dataset_text_template.txt')).read()
     template_text = template_text.format(dataset_label = dataset)
     
     annotate_text = '\n'.join(['%s,%s,1,#000000,normal,1' %(k,v) 
@@ -259,8 +263,8 @@ def to_external_label(acc2info,dataset='label info'):
 
 
 def label_text(acc2info):
-    os.chdir('/share/home-user/hyc/db/')
-    template_text = open('./itol_template/labels_template.txt').read()
+    
+    template_text = open(os.path.join(dbpath,'labels_template.txt')).read()
     
     annotate_text = '\n'.join(['%s,%s' %(k,k) 
                                for k,v in acc2info.items()])
@@ -269,70 +273,12 @@ def label_text(acc2info):
 
 
 def to_popup(acc2info):
-    os.chdir('/share/home-user/hyc/db/')
-    template_text = open('./itol_template/popup_info_template.txt').read()
+    
+    template_text = open(os.path.join(dbpath,'popup_info_template.txt')).read()
     
     annotate_text = '\n'.join(['%s,accession,%s' %(k,v) 
                                for k,v in acc2info.items()])
     
     return template_text + '\n' + annotate_text
-
-
-if __name__ == '__main__':
-
-    os.chdir('D:/eaco/Documents/protocol&method')
-    # df = pd.read_excel('total_ref_outgroup.xlsx')
-    # df = find_proteoclass(df)
-    #
-    # # extract the info you want to annotate
-    # acc2phylum = dict(zip(df['version'],df['phylum']))
-    #
-    # # 获取总颜色，将三者统一
-    # phyla2color = {p:c for p,c in zip(sorted(set(acc2phylum.values())),
-    #                                   px.colors.qualitative.Dark24 + px.colors.qualitative.Light24)}
-    # phyla2color['Proteobacteria']='#3C6A54'
-    # phyla2color['Alphaproteobacteria']='#FAD4A2'
-    # phyla2color['Betaproteobacteria']='#56CEFF'
-    # phyla2color['Gammaproteobacteria']='#98C995'
-    # phyla2color['Epsilonproteobacteria']='#52B6DC'
-    # phyla2color['Deltaproteobacteria']='#DAE8AA'
-    # phyla2color['Oligoflexia']='#FF8028'
-
-    # 导入基因
-    gene = 'nirS'
-    df = pd.read_excel(gene+'_ref_outgroup.xlsx')
-    df = find_proteoclass(df)
-
-    # extract the info you want to annotate
-    acc2phylum = dict(zip(df['version'],df['phylum']))
-    acc2phyclas = dict(zip(df['version'],df['phy/class']))
-    acc2len = dict(zip(df['version'],df['len']))
-    acc2type = dict(zip(df['version'],df['type']))
-
-    # color strip
-    # out_text_phylum = to_color_strip(acc2phylum,phyla2color,'phylum')
-    # out_text_phyclas = to_color_strip(acc2phyclas,phyla2color,'phylum/class')
-
-    # label range
-    # out_text = to_color_range(acc2phylum,phyla2color)
-
-    # outgroup
-    # out_text = highlight_outgroup(acc2type)
-
-    # len
-    out_text = simplebar(acc2len,'Sequence length')
-
-
-    # output
-    os.chdir('/share/home-user/hyc/work/5_tree/annotate/')
-
-    # with open('./itol_annot/' + gene + '_colorstrip_phylum.txt','w') as f:
-    #     f.write(out_text_phylum)
-
-    # with open('./itol_annot/' + gene + '_colorstrip_phyclas.txt', 'w') as f:
-    #     f.write(out_text_phyclas)
-
-    with open('./' + gene + '_len.txt', 'w') as f:
-        f.write(out_text)
 
 
