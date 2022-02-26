@@ -4,8 +4,37 @@ import pandas as pd
 import plotly.express as px
 import os
 import re
+import numpy as np
+import matplotlib as mpl
 
 dbpath = os.path.join(os.path.abspath(os.path.dirname(__file__)),'itol_template')
+
+
+def get_used_sep(text):
+    separator = [_ for _ in text.split("\n") if _.startswith("SEPARATOR")]
+    assert len(separator) == 1
+    separator = separator[0].strip()
+    sep = separator.split(" ")[1]
+    if sep == "TAB":
+        return "\t"
+    elif sep == "SPACE":
+        return " "
+    elif sep == "COMMA":
+        return ","
+
+
+def replacing_params(text, kwarg={}):
+    sep= get_used_sep(text)
+    for k, v in kwarg.items():
+        if k.upper() in ['MARGIN',"STRIP_WIDTH"]:
+            row = [_ for _ in text.split('\n') if k.upper() in _]
+            assert len(row) == 1
+            if row:
+                text = text.replace(row[0],sep.join([k.upper(),str(v)])+'\n' )
+        else:
+            text = text.replace(k, v)
+    return text
+
 
 def find_proteoclass(df):
     phy_class = []
@@ -266,7 +295,7 @@ def label_text(acc2info):
     
     template_text = open(os.path.join(dbpath,'labels_template.txt')).read()
     
-    annotate_text = '\n'.join(['%s,%s' %(k,k) 
+    annotate_text = '\n'.join(['%s,%s' %(k,v) 
                                for k,v in acc2info.items()])
     
     return template_text + '\n' + annotate_text
@@ -282,3 +311,79 @@ def to_popup(acc2info):
     return template_text + '\n' + annotate_text
 
 
+def colorFader(c1, c2, mix=0
+               ):  # (linear interpolate) from color c1 (at mix=0) to c2 (mix=1)
+    c1 = np.array(mpl.colors.to_rgb(c1))
+    c2 = np.array(mpl.colors.to_rgb(c2))
+    return mpl.colors.to_hex((1 - mix) * c1 + mix * c2)
+
+
+# generate_gradient_legend(100,50,0,'#ff0000','#FFFFFF','#0000ff')
+def generate_gradient_legend(
+    max_val, mid_val, min_val, max_c, mid_c, min_c, num_interval=7
+):
+    legened_v2color = {}
+    if num_interval % 2 == 1:
+        remained_i = (num_interval - 1) // 2
+        legened_v2color[round(mid_val, 2)] = mid_c
+    else:
+        remained_i = num_interval // 2
+
+    total_v = max_val - mid_val
+    inter_v = int(total_v / remained_i)
+    for _p in range(1, remained_i):
+        des_v = _p * inter_v + mid_val
+        per = _p * inter_v / total_v
+        new_color = colorFader(mid_c, max_c, per)
+        legened_v2color[round(des_v, 2)] = new_color
+    legened_v2color[round(max_val, 2)] = max_c
+
+    total_v = mid_val - min_val
+    inter_v = int(total_v / remained_i)
+    for _p in range(1, remained_i):
+        des_v = _p * inter_v + min_val
+        per = _p * inter_v / total_v
+        new_color = colorFader(min_c, mid_c, per)
+        legened_v2color[round(des_v, 2)] = new_color
+    legened_v2color[round(min_val, 2)] = min_c
+    return legened_v2color
+
+
+def color_gradient(
+    id2val, dataset_name="Completness", max_val=None, min_val=None, mid_val=50, other_params={}
+):
+    default_max = "#ff0000"
+    default_min = "#0000ff"
+    default_mid = "#FFFFFF"
+
+    template_text = open(os.path.join(dbpath,'dataset_gradient_template.txt')).read()
+    sep = get_used_sep(template_text)
+
+    all_vals = list(set([v for k, v in id2val.items()]))
+
+    mid_val = np.mean(all_vals) if mid_val is None else mid_val
+    max_val = max(all_vals) if max_val is None else max_val
+    min_val = min(all_vals) if min_val is None else min_val
+
+    l2colors = generate_gradient_legend(
+        max_val, mid_val, min_val, default_max, default_mid, default_min, num_interval=7
+    )
+
+    legend_text = f"""
+LEGEND_TITLE{sep}{dataset_name}
+LEGEND_SHAPES{sep}{sep.join(['1'] * 7)}
+LEGEND_COLORS{sep}{sep.join([_[1] for _ in list(sorted(l2colors.items()))])}
+LEGEND_LABELS{sep}{sep.join(map(str, [_[0] for _ in list(sorted(l2colors.items()))]))}"""
+
+    annotate_text = "\n".join(
+        [f"{label}{sep}{val}" for label, val in id2val.items()])
+
+    text = template_text.format(
+        dataset_label=dataset_name,
+        legend_text=legend_text,
+        color_min=default_min,
+        color_max=default_max,
+        color_mid=default_mid)
+    text = replacing_params(text, other_params)
+
+    return text + "\n" + annotate_text
