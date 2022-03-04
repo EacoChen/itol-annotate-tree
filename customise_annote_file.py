@@ -36,6 +36,7 @@ def replacing_params(text, kwarg={}):
     return text
 
 
+
 def find_proteoclass(df):
     phy_class = []
     for index, row in df.iterrows():
@@ -50,6 +51,7 @@ def find_proteoclass(df):
     df['phy/class'] = phy_class
     return df
 
+
 def std_legend(title,info,sep=','):
 
     legend_title = title
@@ -63,6 +65,29 @@ LEGEND_SHAPES{sep}{legend_shape}
 LEGEND_COLORS{sep}{legend_color}
 LEGEND_LABELS{sep}{legend_label}"""
 
+    return legend_text
+
+
+def deduced_legend2(info2style, infos, same_colors=False, sep="\t"):
+    # for info2style instead of info2color
+    
+    colors_theme = px.colors.qualitative.Dark24 + px.colors.qualitative.Light24
+    shapes = []
+    labels = []
+    colors = []
+    for idx, info in enumerate(infos):
+        shapes.append(info2style[info].get("shape", "1"))
+        labels.append(info2style[info].get("info", info))
+        if not same_colors:
+            colors.append(info2style[info].get("color", colors_theme[idx]))
+        else:
+            colors.append(info2style[info].get("color", same_colors))
+    legend_text = [
+        "FIELD_SHAPES" + sep + sep.join(shapes),
+        "FIELD_LABELS" + sep + sep.join(labels),
+        "FIELD_COLORS" + sep + sep.join(colors),
+    ]
+    legend_text = "\n".join(legend_text)
     return legend_text
 
 
@@ -184,24 +209,24 @@ def simplebar(acc2len,name,color='#707FD1'):
     return out_text
 
 
-def to_binary(acc2info, label='binary', sep=','):
-    shape = sep.join(range(1,len(set(list(acc2info.values())))+1))
-    field_labels = sep.join(list(acc2info.values()))
+# def to_binary(acc2info, label='binary', sep=','):
+#     shape = sep.join(range(1,len(set(list(acc2info.values())))+1))
+#     field_labels = sep.join(list(acc2info.values()))
 
     
-    template_text = open(os.path.join(dbpath,'dataset_binary_template.txt')).read()
+#     template_text = open(os.path.join(dbpath,'dataset_binary_template.txt')).read()
 
-    template_text = template_text.format(shape=shape,
-                                         field_labels=field_labels,
-                                         dataset_label=label)
+#     template_text = template_text.format(shape=shape,
+#                                          field_labels=field_labels,
+#                                          dataset_label=label)
 
-    df = pd.DataFrame(acc2info)
-    annotate_text = '\n'.join([sep.join([str(_) for _ in list(row)[1:]])
-                               for row in df.itertuples()])
+#     df = pd.DataFrame(acc2info)
+#     annotate_text = '\n'.join([sep.join([str(_) for _ in list(row)[1:]])
+#                                for row in df.itertuples()])
 
-    out_text = template_text + '\n' + annotate_text
+#     out_text = template_text + '\n' + annotate_text
 
-    return out_text
+#     return out_text
 
 
 # def to_binary_init():
@@ -387,3 +412,56 @@ LEGEND_LABELS{sep}{sep.join(map(str, [_[0] for _ in list(sorted(l2colors.items()
     text = replacing_params(text, other_params)
 
     return text + "\n" + annotate_text
+
+
+def to_binary_shape(
+    ID2info,
+    info2style=None,
+    same_color=False,
+    dataset_name="Presence/Absence matrix",
+    manual_v=[],
+    unfilled_other=False,
+    other_params={},
+    no_legend=False,
+):
+    # id2info, could be {ID:list/set}
+    # info2color: could be {gene1: {shape:square,color:blabla},}
+    # None will use default.
+    # if turn unfilled_other on, it will not draw the unfilled markers
+    #
+    template_text = open(os.path.join(dbpath,'dataset_binary_template.txt')).read() + "\n"
+    sep = get_used_sep(template_text)
+    if not manual_v:
+        all_v = list(
+            sorted(set([_ for v in ID2info.values() for _ in v if _])))
+    else:
+        all_v = manual_v
+
+    # if coord_cols:
+    #     extra_replace.update({'#SYMBOL_SPACING,10':"SYMBOL_SPACING\t-27"})
+    if info2style is None:
+        info2style = {k: {} for k in all_v}
+    unfilled_label = "-1" if unfilled_other else "0"
+
+    annotate_text = []
+    for _ID, vset in ID2info.items():
+        row = sep.join(
+            [_ID] + ["1" if _ in vset else unfilled_label for _ in all_v])
+        annotate_text.append(row)
+    annotate_text = "\n".join(annotate_text)
+
+    legend_text = deduced_legend2(
+        info2style, all_v, sep=sep, same_colors=same_color)
+    if no_legend:
+        real_legend_text = ""
+    else:
+        real_legend_text = f"LEGEND_TITLE\t{dataset_name}\n" + legend_text.replace(
+            "FIELD", "LEGEND"
+        )
+
+    template_text = replacing_params(template_text, other_params)
+    template_text = template_text.format(
+        legend_text=legend_text + "\n" + real_legend_text, dataset_label=dataset_name
+    )
+
+    return template_text + "\n" + annotate_text
