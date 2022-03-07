@@ -68,7 +68,7 @@ LEGEND_LABELS{sep}{legend_label}"""
     return legend_text
 
 
-def deduced_legend2(info2style, infos, same_colors=False, sep="\t"):
+def deduced_legend2(info2style, infos, same_colors=False, full=False, sep="\t"):
     # for info2style instead of info2color
     
     colors_theme = px.colors.qualitative.Dark24 + px.colors.qualitative.Light24
@@ -79,7 +79,10 @@ def deduced_legend2(info2style, infos, same_colors=False, sep="\t"):
         shapes.append(info2style[info].get("shape", "1"))
         labels.append(info2style[info].get("info", info))
         if not same_colors:
-            colors.append(info2style[info].get("color", colors_theme[idx]))
+            if full:
+                colors.append(info2style[info].get("color"))
+            else:
+                colors.append(info2style[info].get("color", colors_theme[idx]))
         else:
             colors.append(info2style[info].get("color", same_colors))
     legend_text = [
@@ -276,31 +279,32 @@ def simplebar(acc2len,name,color='#707FD1'):
 #     return out_text
 
 
-def get_color(acc2info):
+def get_color(acc2info,phylum=False):
     phyla2color = {p:c for p,c in zip(sorted(set(acc2info.values())),
                                       px.colors.qualitative.T10 + px.colors.qualitative.Alphabet)}
-    phyla2color['Proteobacteria']='#3C6A54'
-    phyla2color['Alphaproteobacteria']='#FAD4A2'
-    phyla2color['Betaproteobacteria']='#56CEFF'
-    phyla2color['Gammaproteobacteria']='#98C995'
-    phyla2color['Epsilonproteobacteria']='#52B6DC'
-    phyla2color['Deltaproteobacteria']='#DAE8AA'
-    phyla2color['Oligoflexia']='#FF8028'
-    phyla2color['Candidatus Muproteobacteria'] = '#BD2B1C'
-    phyla2color['Zetaproteobacteria'] = '#63680c'
-    phyla2color['Actinobacteria']= '#E15F99'
-    phyla2color['Bacteroidetes'] = '#DA16FF'
-    phyla2color['Chloroflexi'] = '#511CFB'
-    phyla2color['Cyanobacteria'] = '#00A08B'
-    phyla2color['Euryarchaeota'] = '#FC0080'
-    phyla2color['Firmicutes'] = '#B2828D'
-    phyla2color['Gemmatimonadetes'] ='#6C7C32'
-    phyla2color['Nitrospinae'] = '#862A16'
-    phyla2color['Nitrospirae'] = '#A777F1'
-    phyla2color['Planctomycetes'] = '#620042'
-    phyla2color['Acidithiobacillia'] = '#336666'
-    phyla2color['Crenarchaeota']= '#BAB0AC'
-    phyla2color['Deinococcus-Thermus']= '#3283FE'
+    if phylum:
+        phyla2color['Proteobacteria']='#3C6A54'
+        phyla2color['Alphaproteobacteria']='#FAD4A2'
+        phyla2color['Betaproteobacteria']='#56CEFF'
+        phyla2color['Gammaproteobacteria']='#98C995'
+        phyla2color['Epsilonproteobacteria']='#52B6DC'
+        phyla2color['Deltaproteobacteria']='#DAE8AA'
+        phyla2color['Oligoflexia']='#FF8028'
+        phyla2color['Candidatus Muproteobacteria'] = '#BD2B1C'
+        phyla2color['Zetaproteobacteria'] = '#63680c'
+        phyla2color['Actinobacteria']= '#E15F99'
+        phyla2color['Bacteroidetes'] = '#DA16FF'
+        phyla2color['Chloroflexi'] = '#511CFB'
+        phyla2color['Cyanobacteria'] = '#00A08B'
+        phyla2color['Euryarchaeota'] = '#FC0080'
+        phyla2color['Firmicutes'] = '#B2828D'
+        phyla2color['Gemmatimonadetes'] ='#6C7C32'
+        phyla2color['Nitrospinae'] = '#862A16'
+        phyla2color['Nitrospirae'] = '#A777F1'
+        phyla2color['Planctomycetes'] = '#620042'
+        phyla2color['Acidithiobacillia'] = '#336666'
+        phyla2color['Crenarchaeota']= '#BAB0AC'
+        phyla2color['Deinococcus-Thermus']= '#3283FE'
     
     return phyla2color
 
@@ -423,6 +427,7 @@ def to_binary_shape(
     unfilled_other=False,
     other_params={},
     no_legend=False,
+    full=False,
 ):
     # id2info, could be {ID:list/set}
     # info2color: could be {gene1: {shape:square,color:blabla},}
@@ -451,7 +456,7 @@ def to_binary_shape(
     annotate_text = "\n".join(annotate_text)
 
     legend_text = deduced_legend2(
-        info2style, all_v, sep=sep, same_colors=same_color)
+        info2style, all_v, sep=sep, same_colors=same_color,full=full)
     if no_legend:
         real_legend_text = ""
     else:
